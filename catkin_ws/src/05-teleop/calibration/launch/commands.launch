@@ -14,7 +14,7 @@
 
     <arg name="k1" default="0.2" doc="Mean command for sine calibration."/>
     <arg name="k2" default="0.06" doc="Amplitude of sines."/>
-    <arg name="omega" default="0.007" doc="Angular velocity."/>   
+    <arg name="omega" default="0.007" doc="Angular velocity."/>
     <arg name="duration" default="2000" doc="Duration of sine calibration."/>
 
     <node pkg="rosbag" type="record" args="record -O /media/logs/$(arg veh)_calibration -a" name="record" output="screen"/>
@@ -25,11 +25,11 @@
 		 <param name="vFin" value="$(arg vFin)"/>
 		 <param name="Nstep" value="$(arg Nstep)"/>
 		 <!-- param name="stepTime" value="$(arg stepTime)"/ -->
-		
-		 <param name="k1" value="$(arg k1)"/>
-                 <param name="k2" value="$(arg k2)"/>
-                 <param name="omega" value="$(arg omega)"/>
-                 <param name="duration" value="$(arg duration)"/>
+
+		<param name="k1" value="$(arg k1)"/>
+    <param name="k2" value="$(arg k2)"/>
+    <param name="omega" value="$(arg omega)"/>
+    <param name="duration" value="$(arg duration)"/>
     </node>
 
 
@@ -38,7 +38,7 @@
     </include>
 
 
-    <include file="$(find duckietown)/launch/camera.launch"> 
+    <include file="$(find duckietown)/launch/camera.launch">
 
 	    <arg name="veh" value="$(arg veh)"/>
 	    <arg name="local" value="$(arg local)"/>
