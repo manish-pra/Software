@@ -53,8 +53,8 @@ class calib():
         self.robot_name = rospy.get_param("~veh")
         #self.p0 = [0.001, 0.001, 0.8, -0.05] #cr, cl, g, tr
         self.p0 = [0.2,0.2]
-        self.DATA_BEG_INDEX = 20
-        self.DATA_END_INDEX = -40 # ignore last data points
+        self.DATA_BEG_INDEX = 0
+        self.DATA_END_INDEX = -20 # ignore last data points
         self.Ts = 1.0/30 # sec
         self.delta = 0.05
         self.L = 10.5 * 10 ** -2 # meters
@@ -81,7 +81,7 @@ class calib():
         self.y_opt_predict_ramp = None
         self.y_pred_sine_default_params = None
         self.y_opt_predict_sine = None
-        self.y_opt_predict_combine = None
+        self.y_opt_predict = None
 
         self.fit_=self.nonlinear_model_fit()
         #self.plots()
@@ -821,32 +821,39 @@ class calib():
 
         # Actual Parameter Optimization/Fitting
         # Minimize the least squares error between the model predition
-        result_combined = minimize(self.cost_function, p0, args=(p0, cmd_ramp_right, cmd_ramp_left, s_init_ramp, x_ramp_meas, y_ramp_meas, yaw_ramp_meas, timepoints_ramp, cmd_sine_right, cmd_sine_left, s_init_sine, x_sine_meas, y_sine_meas, yaw_sine_meas, timepoints_sine))
-        popt = result_combined.x
-
+        result = minimize(self.cost_function, p0, args=(p0, cmd_ramp_right, cmd_ramp_left, s_init_ramp, x_ramp_meas, y_ramp_meas, yaw_ramp_meas, timepoints_ramp, cmd_sine_right, cmd_sine_left, s_init_sine, x_sine_meas, y_sine_meas, yaw_sine_meas, timepoints_sine))
+        popt = result.x
         print('[BEGIN] Optimization Result for sine Manouver\n')
-        print(result_combined)
+        print(result)
         print('[END] Optimization Result for sine Manouver\n')
 
-        self.sine_plots(p0,popt, cmd_sine_right, cmd_sine_left, s_init_sine, x_sine_meas, y_sine_meas, yaw_sine_meas, time_sine,timepoints_sine)
-        #self.ramp_plots(p0, popt, cmd_ramp_right, cmd_ramp_left, s_init_ramp, x_ramp_meas, y_ramp_meas, yaw_ramp_meas, time_ramp, timepoints_ramp)
+
+        print "XXXXXXXXXXXXXXXXXXXXXXx"
+        print "size x_ramp_meas: {}".format(x_ramp_meas.size)
+        print "size y_ramp_meas: {}".format(y_ramp_meas.size)
+
+        print "size cmd_ramp_right: {}".format(cmd_ramp_right.size)
+        print "size time_ramp: {}".format(time_ramp.size)
+        print "size timepoints_ramp: {}".format(timepoints_ramp.size)
+
+        # Make a prediction based on the fitted parameters for ramp experiment data
+        y_opt_predict_ramp = self.simulate(popt, cmd_ramp_right, cmd_ramp_left, s_init_ramp , timepoints_ramp) # Predict to calculate Error
+        self.y_opt_predict_ramp = y_opt_predict_ramp
+        # Make a prediction based on the fitted parameters for sine experiment data
+        y_opt_predict_sine = self.simulate(popt, cmd_sine_right, cmd_sine_left, s_init_sine , timepoints_sine) # Predict to calculate Error
+        self.y_opt_predict_sine = y_opt_predict_sine
+
+        self.sine_plots(p0, popt, y_opt_predict_sine, cmd_sine_right, cmd_sine_left, s_init_sine, x_sine_meas, y_sine_meas, yaw_sine_meas, time_sine, timepoints_sine)
+        self.ramp_plots(p0, popt, y_opt_predict_ramp, cmd_ramp_right, cmd_ramp_left, s_init_ramp, x_ramp_meas, y_ramp_meas, yaw_ramp_meas, time_ramp, timepoints_ramp)
 
         popt_dict = {}
         return popt_dict
 
-    def sine_plots(self,p0, popt, cmd_sine_right, cmd_sine_left, s_init_sine, x_sine_meas, y_sine_meas, yaw_sine_meas, time_sine, timepoints_sine):
-
-        # Make a prediction based on the fitted parameters
-        y_opt_predict_combine = self.simulate(popt, cmd_sine_right, cmd_sine_left, s_init_sine , timepoints_sine) # Predict to calculate Error
-        self.y_opt_predict_combine = y_opt_predict_combine
-        #print y_opt_predict_combine[:,1]
-
-        #print("Type of input y_opt_predict_combine: {}".format(type(y_opt_predict_combine)))
-        #print("Content y_opt_predict_combine: {}".format(y_opt_predict_combine))
+    def sine_plots(self,p0, popt, y_opt_predict_sine, cmd_sine_right, cmd_sine_left, s_init_sine, x_sine_meas, y_sine_meas, yaw_sine_meas, time_sine, timepoints_sine):
 
         Y = np.stack((x_sine_meas, y_sine_meas, yaw_sine_meas), axis=1)
 
-        MSE_sine = np.sum((Y-y_opt_predict_combine)**2)/y_opt_predict_combine.size # Calculate the Mean Squared Error
+        MSE_sine = np.sum((Y-y_opt_predict_sine)**2)/y_opt_predict_sine.size # Calculate the Mean Squared Error
 
         y_pred_sine_default_params = self.simulate(p0, cmd_sine_right, cmd_sine_left, s_init_sine , timepoints_sine)
         self.y_pred_sine_default_params = y_pred_sine_default_params
@@ -865,9 +872,9 @@ class calib():
 
 
         # Model predictions with optimal parametes
-        x_sine_pred_handle, = ax1.plot(time_sine[timepoints_sine],y_opt_predict_combine[:,0],'b', label = 'x predict opt')
-        y_sine_pred_handle, = ax1.plot(time_sine[timepoints_sine],y_opt_predict_combine[:,1],'g', label = 'y predict opt')
-        yaw_sine_pred_handle, = ax1.plot(time_sine[timepoints_sine],y_opt_predict_combine[:,2],'r', label = 'yaw predict opt')
+        x_sine_pred_handle, = ax1.plot(time_sine[timepoints_sine],y_opt_predict_sine[:,0],'b', label = 'x predict opt')
+        y_sine_pred_handle, = ax1.plot(time_sine[timepoints_sine],y_opt_predict_sine[:,1],'g', label = 'y predict opt')
+        yaw_sine_pred_handle, = ax1.plot(time_sine[timepoints_sine],y_opt_predict_sine[:,2],'r', label = 'yaw predict opt')
 
         ax1.set_xlabel('time [s]')
         ax1.set_ylabel('position [m] / heading [rad]')
@@ -879,24 +886,23 @@ class calib():
         labels = [h.get_label() for h in handles]
 
         fig2.legend(handles=handles, labels=labels, prop={'size': 10}, loc=0)
-        fig2.suptitle('Measurements and Prediction with Default/Optimal(Combined CF) Parameter Values - Sine Manouver', fontsize=16)
+        fig2.suptitle('Measurements and Prediction with Default/Optimal Parameter Values - Sine Manouver', fontsize=16)
         #plt.show(block=True)
-    def ramp_plots(self,p0, popt, cmd_ramp_right, cmd_ramp_left, s_init_ramp, x_ramp_meas, y_ramp_meas, yaw_ramp_meas, time_ramp, timepoints_ramp):
-
-        # Make a prediction based on the fitted parameters
-        y_opt_predict_combine = self.simulate(popt, cmd_ramp_right, cmd_ramp_left, s_init_ramp , timepoints_ramp) # Predict to calculate Error
-        self.y_opt_predict_combine = y_opt_predict_combine
-        #print y_opt_predict_combine[:,1]
-
-        #print("Type of input y_opt_predict_combine: {}".format(type(y_opt_predict_combine)))
-        #print("Content y_opt_predict_combine: {}".format(y_opt_predict_combine))
-
+    def ramp_plots(self,p0, popt, y_opt_predict_ramp, cmd_ramp_right, cmd_ramp_left, s_init_ramp, x_ramp_meas, y_ramp_meas, yaw_ramp_meas, time_ramp, timepoints_ramp):
         Y = np.stack((x_ramp_meas, y_ramp_meas, yaw_ramp_meas), axis=1)
 
-        MSE_ramp = np.sum((Y-y_opt_predict_combine)**2)/y_opt_predict_combine.size # Calculate the Mean Squared Error
+        MSE_ramp = np.sum((Y-y_opt_predict_ramp)**2)/y_opt_predict_ramp.size # Calculate the Mean Squared Error
 
         y_pred_ramp_default_params = self.simulate(p0, cmd_ramp_right, cmd_ramp_left, s_init_ramp , timepoints_ramp)
         self.y_pred_ramp_default_params = y_pred_ramp_default_params
+
+
+        print "size x_sine_meas: {}".format(x_ramp_meas.size)
+        print "size y_sine_meas: {}".format(y_ramp_meas.size)
+
+        print "size cmd_ramp_right: {}".format(cmd_ramp_right.size)
+        print "size time_ramp: {}".format(time_ramp.size)
+        print "size timepoints_ramp: {}".format(timepoints_ramp.size)
 
         # PLOTTING
         fig1, ax1 = plt.subplots()
@@ -910,11 +916,10 @@ class calib():
         y_ramp_pred_default_handle, = ax1.plot(time_ramp[timepoints_ramp],y_pred_ramp_default_params[:,1],'go', label = 'y predict def')
         yaw_ramp_pred_default_handle, = ax1.plot(time_ramp[timepoints_ramp],y_pred_ramp_default_params[:,2],'ro', label = 'yaw predict def')
 
-
         # Model predictions with optimal parametes
-        x_ramp_pred_handle, = ax1.plot(time_ramp[timepoints_ramp],y_opt_predict_combine[:,0],'b', label = 'x predict opt')
-        y_ramp_pred_handle, = ax1.plot(time_ramp[timepoints_ramp],y_opt_predict_combine[:,1],'g', label = 'y predict opt')
-        yaw_ramp_pred_handle, = ax1.plot(time_ramp[timepoints_ramp],y_opt_predict_combine[:,2],'r', label = 'yaw predict opt')
+        x_ramp_pred_handle, = ax1.plot(time_ramp[timepoints_ramp],y_opt_predict_ramp[:,0],'b', label = 'x predict opt')
+        y_ramp_pred_handle, = ax1.plot(time_ramp[timepoints_ramp],y_opt_predict_ramp[:,1],'g', label = 'y predict opt')
+        yaw_ramp_pred_handle, = ax1.plot(time_ramp[timepoints_ramp],y_opt_predict_ramp[:,2],'r', label = 'yaw predict opt')
 
         ax1.set_xlabel('time [s]')
         ax1.set_ylabel('position [m] / heading [rad]')
@@ -926,7 +931,7 @@ class calib():
         labels = [h.get_label() for h in handles]
 
         fig1.legend(handles=handles, labels=labels, prop={'size': 10}, loc=0)
-        fig1.suptitle('Measurements and Prediction with Default/Optimal(Combined CF) Parameter Values - Sine Manouver', fontsize=16)
+        fig1.suptitle('Measurements and Prediction with Default/Optimal Parameter Values - Ramp Manouver', fontsize=16)
         #plt.show(block=True)
 
     def write_calibration(self):
