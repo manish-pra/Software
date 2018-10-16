@@ -29,7 +29,8 @@ import yaml
 import pickle
 
 PREPARE_CALIBRATION_DATA_FOR_OPTIMIZATION = False
-EXPERIMENT_NAME_FOR_PICKLE = "0910_4.pckl"
+#EXPERIMENT_NAME_FOR_PICKLE = "0910_4.pckl"
+EXPERIMENT_NAME_FOR_PICKLE = "0910_2.pckl"
 """
 TODO
 
@@ -50,11 +51,11 @@ class calib():
 
         # defaults overwritten by paramminimize(self.objective, p0)
         self.robot_name = rospy.get_param("~veh")
-        self.p0 = [0.6, 0.0]
+        self.p0 = [0.6, 0.0, 15.0]
         self.DATA_BEG_INDEX = 0
-        self.DATA_END_INDEX = -10
+        self.DATA_END_INDEX = -50
         self.Ts = 1.0/30
-        self.delta = 0.0
+        self.delta = 0.05
 
         if PREPARE_CALIBRATION_DATA_FOR_OPTIMIZATION:
             # Load homography
@@ -296,8 +297,8 @@ class calib():
                     veh_eulerangles=self.rot2ZYXEuler(T_world_veh[:3, :3])
 
 
-                    # print "-------Euler Angles-------"
-                    # print eulerangles
+                    print "-------Euler Angles-------"
+                    print veh_eulerangles[2]
 
                     #split into 2 arrays for the different experiments
                     if t<stopTime[0]:
@@ -633,62 +634,6 @@ class calib():
                 cmd_ramp_right, cmd_ramp_left,
                 timepoints_sine, time_sine,
                 cmd_sine_right, cmd_sine_left)
-
-    def simulation_model(self, X, c, cl, tr, x_0, y_0, yaw_0, d):
-        Ts = self.Ts
-
-        d = 0.06  # Distance of camera from Baseline is fixed and not part of the optimization for now
-        #X=X.reshape((int(X.size/2),2),order='F')
-        #cmd_right = X[:,0]
-        #cmd_left  = X[:,1]
-        cmd_size  = np.int(X[-1])  # This is not so elegant but I had no better idea for now
-        cmd_right = X[0:cmd_size]
-        cmd_left  = X[cmd_size:cmd_size*2]
-        timepoints= X[cmd_size*2:-1].astype(int)
-
-        # Model based on parameters predicts velocities and turn rates
-        # c is the "forward speed gain"
-        # cl is the "turning rate gain"
-        # tr is the "undesired turning rate gain when commanding to go straight"
-        # This model deliberately neglects the influence of the tr on the forward speed
-        # d is the offset of the camera to center of the wheels
-        vx_pred = c * (cmd_right+cmd_left)* 0.5 # + tr * (cmd_right-cmd_left)*0.5
-        omega_pred = cl * (cmd_right-cmd_left) * 0.5 + tr * (cmd_right+cmd_left) * 0.5
-        vy_pred = omega_pred*d  # The model currently also estimates the offset of the camera position
-
-        # Forward Euler Integration (improve to RK4?) to get Position Estimates
-        yaw_pred = np.cumsum(omega_pred)*Ts + yaw_0
-        x_pred = np.cumsum(np.cos(yaw_pred)*vx_pred + np.sin(yaw_pred)*vy_pred)*Ts + x_0
-        y_pred = np.cumsum(np.sin(yaw_pred)*vx_pred + np.cos(yaw_pred)*vy_pred)*Ts + y_0
-
-        # The _0 Parameters are just the integration constants and also need to be fitted
-        # but we don't care about them later
-
-        # Match and pick the prediction steps with the closest available position
-        # Based on looking at the data we assume the images were taken at a perfect
-        # 30 FPS rate. Therefore, we match to the fixed (perfect) sampling rate
-        # and do not interpolate. The pred vectors are thus evaluated at the timepoints
-
-        # Output has to be a 1D Vector for curve_fit to work
-        Y = np.concatenate((x_pred[timepoints], y_pred[timepoints], yaw_pred[timepoints]), axis=0)
-        return Y
-
-
-    @staticmethod
-    def kinematic_model(s, t,cmd_right,cmd_left, p):
-        d = 0.06  # Distance of camera from Baseline is fixed and not part of the optimization for now
-        # optimized parameters
-        c, cl, tr = p
-
-        # Simple Kinematic model
-        # Assumptions: Rigid body, No lateral slip
-
-        x_dot_rob = c * (cmd_right+cmd_left) * 0.5 # + tr * (cmd_right-cmd_left)*0.5
-        omega_rob = cl * (cmd_right-cmd_left) * 0.5 + tr * (cmd_right+cmd_left) * 0.5
-        y_dot_rob = omega_rob * d  # The model currently also estimates the offset of the camera position
-
-        return [x_dot_rob,  y_dot_rob, omega_rob]
-
     @staticmethod
     def loadExperimentData():
         f = open(EXPERIMENT_NAME_FOR_PICKLE, 'rb')
@@ -722,8 +667,7 @@ class calib():
                 timepoints_sine, time_sine,
                 cmd_sine_right, cmd_sine_left)
 
-    @staticmethod
-    def resampling(time_ramp_meas, time_ramp_cmd, cmd_ramp_right, cmd_ramp_left, time_sine_meas, time_sine_cmd, cmd_sine_right, cmd_sine_left):
+    def resampling(self,time_ramp_meas, time_ramp_cmd, cmd_ramp_right, cmd_ramp_left, time_sine_meas, time_sine_cmd, cmd_sine_right, cmd_sine_left):
         # Sampling Time of the Identification
         Ts = self.Ts
         # generate an equally spaced time vector over the full length of position measurement times
@@ -747,20 +691,28 @@ class calib():
         return timepoints_ramp, time_ramp, cmd_ramp_right, cmd_ramp_left, timepoints_sine, time_sine, cmd_sine_right, cmd_sine_left
 
     def forwardEuler(self,s_cur, Ts, cmd_right, cmd_left,p):
-        c, tr = p
+        c, tr, L = p
 
         x_0 = s_cur[0]
         y_0 = s_cur[1]
         yaw_0 = s_cur[2]
 
-        vx_pred = c * (cmd_right+cmd_left) * 0.5 + tr * (cmd_right-cmd_left)*0.5
-        omega_pred = cl * (cmd_right-cmd_left) * 0.5 + tr * (cmd_right+cmd_left) * 0.5
+        # Model based on parameters predicts velocities and turn rates
+        # c is the "forward speed gain"
+        # cl is the "turning rate gain"
+        # tr is the "undesired turning rate gain when commanding to go straight"
+        # This model deliberately neglects the influence of the tr on the forward speed
+        # d is the offset of the camera to center of the wheels
+
+        vx_pred = c * (cmd_right+cmd_left) * 0.5 + (tr/2) * (cmd_right-cmd_left) * 0.5
+        omega_pred = (c/L) * (cmd_right-cmd_left) * 0.5 + (tr / (2 * L)) * (cmd_right+cmd_left) * 0.5
 
         # np.cumsum looks unnecessary since we resampled
         yaw_pred = (omega_pred) * Ts + yaw_0
-        x_pred = (np.cos(yaw_0) * vx_pred) * Ts + x_0
-        y_pred = (np.sin(yaw_0) * vx_pred) * Ts + y_0
+        x_pred = (np.cos(yaw_0) * vx_pred + 0.1) * Ts + x_0
+        y_pred = (np.sin(yaw_0) * vx_pred + 0.1) * Ts + y_0
 
+        #print np.sin(yaw_0)
         """
         a = np.array([x_pred, yaw_pred, y_pred]).reshape(3)
         print("Shape of input a: {}".format(a.shape))
@@ -776,9 +728,9 @@ class calib():
         s[0,0] = s_init[0] # x
         s[0,1] = s_init[1] # y
         s[0,2] = s_init[2] # yaw
-
+        print p
         Ts = self.Ts
-        s_cur = s[0]
+        s_cur = np.copy(s[0])
 
         #print("Shape of input s_cur: {}".format(s_cur.shape))
         #print("Type of input s_cur: {}".format(type(s_cur)))
@@ -805,7 +757,7 @@ class calib():
 
     def cost_function(self,p, p0, cmd_right_ramp, cmd_left_ramp, s_init_ramp, x_meas_ramp, y_meas_ramp, yaw_meas_ramp, time_ramp, cmd_right_sine, cmd_left_sine, s_init_sine, x_meas_sine, y_meas_sine, yaw_meas_sine, time_sine):
         #self.OBJECTIVE_FN_COUNTER += 1
-        #print "OBJECTIVE FN CALL NUMBER: {}".format(self.OBJECTIVE_FN_COUNTER)
+        print "BEG OBJECTIVE FN CALL NUMBER"
 
         #simulate the model
         #states for a particular p set
@@ -815,8 +767,8 @@ class calib():
         obj_cost = 0.0
 
         # Regularization related parameters
-        c_init , tr_init = p0
-        c_cur , tr_cur = p
+        c_init , tr_init, L_init = p0
+        c_cur , tr_cur, L_cur = p
         delta = self.delta
 
         for i in range(len(time_ramp)):
@@ -831,18 +783,17 @@ class calib():
                         ((s_p_sine[i,2] - yaw_meas_sine[i])) ** 2
                        )
 
-        obj_cost+= delta * ((c_cur - c_init) ** 2 + (tr_cur - tr_init) ** 2)
+        obj_cost+= delta * ((c_cur - c_init) ** 2 + (tr_cur - tr_init) ** 2 + (L_cur - L_init) ** 2 )
 
             #obj_cost+= ( ((s_p[i,0] - x_meas[i])/ x_meas[i]) ** 2)
             #print "iter: {} obj value: {} ".format(i, obj_cost)
-        # calculate the objective cost
+        print "END OBJECTIVE FN CALL NUMBER"
         return obj_cost
 
     def experiment_combined(self):
-        print ("\nBEG: EXPERIMENT_COMBINED FN")
-
+        print ("\nBEG: EXPERIMENT_COMBINED FN *************************************************")
         start = self.DATA_BEG_INDEX
-    
+
         (x_ramp_meas,y_ramp_meas, yaw_ramp_meas,
         x_sine_meas,y_sine_meas,yaw_sine_meas,
         timepoints_ramp,time_ramp ,
@@ -883,6 +834,7 @@ class calib():
         x_sine_meas_handle, = ax1.plot(time_sine[timepoints_sine],x_sine_meas,'x',color=(0.5,0.5,1), label = 'x measured')
         y_sine_meas_handle, = ax1.plot(time_sine[timepoints_sine],y_sine_meas,'x',color=(0.5,1,0.5), label = 'y measured')
         yaw_sine_meas_handle, = ax1.plot(time_sine[timepoints_sine],yaw_sine_meas,'x',color=(1,0.5,0.5), label = 'yaw measured')
+
         # Model predictions with default parameters
         x_sine_pred_default_handle, = ax1.plot(time_sine[timepoints_sine],y_pred_sine_default_params[:,0],'bo', label = 'x predict def')
         y_sine_pred_default_handle, = ax1.plot(time_sine[timepoints_sine],y_pred_sine_default_params[:,1],'go', label = 'y predict def')
@@ -904,14 +856,16 @@ class calib():
         ax2.set_ylabel('PWM [%]')
         """
 
-        """
+
         handles = [x_sine_meas_handle,y_sine_meas_handle,yaw_sine_meas_handle,
+                   x_sine_pred_default_handle, y_sine_pred_default_handle, yaw_sine_pred_default_handle,
                    x_sine_pred_default_handle, y_sine_pred_default_handle, yaw_sine_pred_default_handle]
         """
         handles = [x_sine_meas_handle,y_sine_meas_handle,yaw_sine_meas_handle,
-                   x_sine_pred_handle,y_sine_pred_handle,yaw_sine_pred_handle,
-                   x_sine_pred_default_handle, y_sine_pred_default_handle, yaw_sine_pred_default_handle]
+                   x_sine_pred_handle,y_sine_pred_handle,yaw_sine_pred_handle]
+        """
         #,cmd_sine_right_handle,cmd_sine_left_handle
+        #
 
         labels = [h.get_label() for h in handles]
 
@@ -924,11 +878,11 @@ class calib():
         print('[END] Optimization Result for sine Manouver\n')
 
 
-        print ("\nEND: EXPERIMENT_COMBINED FN")
+        print ("\nEND: EXPERIMENT_COMBINED FN *************************************************")
         return popt_combined
     def nonlinear_model_fit(self):
         popt_combined = self.experiment_combined()
-        fit ={'c':popt_combined[0],'tr':popt_combined[2]}
+        fit ={'c':popt_combined[0],'tr':popt_combined[1], 'L':popt_combined[2]}
 
         return fit
 
