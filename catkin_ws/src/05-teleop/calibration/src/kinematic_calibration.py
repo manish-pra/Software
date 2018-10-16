@@ -32,13 +32,6 @@ PREPARE_CALIBRATION_DATA_FOR_OPTIMIZATION = False
 #EXPERIMENT_NAME_FOR_PICKLE = "0910_4.pckl"
 EXPERIMENT_NAME_FOR_PICKLE = "16.10_2.pckl"
 """
-TODO
-
-1) Current way: extract c from ramp, cl and tr from sine
-                simulate the system with the resulting params: how does changing the weights affect?
-2) add regularization
-3) switch to single optimization
-
 TO TRY
 1) different solver options for minimize
 """
@@ -52,11 +45,13 @@ class calib():
         # defaults overwritten by paramminimize(self.objective, p0)
         self.robot_name = rospy.get_param("~veh")
         #self.p0 = [0.001, 0.001, 0.8, -0.05] #cr, cl, g, tr
-        self.p0 = [0.2,0.2]
+        #self.p0 = [0.2,0.2]
+        #self.p0 = [0.8, -0.05, 0.15] #c, tr, L
+        self.p0 = [0.8, 1, -0.05] #c, cl, tr
         self.DATA_BEG_INDEX = 0
-        self.DATA_END_INDEX = -20 # ignore last data points
+        self.DATA_END_INDEX = -30 # ignore last data points
         self.Ts = 1.0/30 # sec
-        self.delta = 0.05
+        self.delta = 0.01
         self.L = 10.5 * 10 ** -2 # meters
         if PREPARE_CALIBRATION_DATA_FOR_OPTIMIZATION:
             # Load homography
@@ -592,9 +587,6 @@ class calib():
         experimentDataObj.cmd_sine_right = cmd_sine_right
         experimentDataObj.cmd_sine_left = cmd_sine_left
 
-        #print 'XXXXXXXXXXXXXXXXXXXXXXXXX'
-        #print experimentDataObj
-
         f = open(EXPERIMENT_NAME_FOR_PICKLE, 'wb')
         pickle.dump(experimentDataObj, f)
         f.close()
@@ -691,32 +683,31 @@ class calib():
 
     def forwardEuler(self,s_cur, Ts, cmd_right, cmd_left,p):
         #cr, cl, g, tr = p
-        rho_1, rho_2 = p
+        #rho_1, rho_2 = p
+        #c, tr, L = p
+        c, cl, tr = p
 
         x_0 = s_cur[0]
         y_0 = s_cur[1]
         yaw_0 = s_cur[2]
 
-        L = self.L
-        # Model based on parameters predicts velocities and turn rates
-        # c is the "forward speed gain"
-        # cl is the "turning rate gain"
-        # tr is the "undesired turning rate gain when commanding to go straight"
-        # This model deliberately neglects the influence of the tr on the forward speed
-        # d is the offset of the camera to center of the wheels
+        #L = self.L
+
+        vx_pred = c * (cmd_right+cmd_left) * 0.5 + tr * (cmd_right-cmd_left)*0.5
+        omega_pred = cl * (cmd_right-cmd_left) * 0.5 + tr * (cmd_right+cmd_left) * 0.5
+
         """
         vx_pred = c * (cmd_right+cmd_left) * 0.5 + (tr/2) * (cmd_left - cmd_right) * 0.5
         omega_pred = (c/L) * (cmd_right-cmd_left) * 0.5 - (tr / (2 * L)) * (cmd_right+cmd_left) * 0.5
         """
-
         """
         vx_pred = (cr / (2 * (g + tr)))  * cmd_right + (cl / (2 * (g - tr)))  * cmd_left
         omega_pred =  (cr / (2 * L * (g + tr)))  * cmd_right - (cl / (2 * L * (g - tr)))  * cmd_left
         """
-
+        """
         vx_pred = rho_1 * cmd_right + rho_2 * cmd_left
         omega_pred =  (1/L) * rho_1 * cmd_right - (1/L) * rho_2 * cmd_left
-
+        """
         yaw_pred = (omega_pred) * Ts + yaw_0
         x_pred = (np.cos(yaw_pred) * vx_pred) * Ts + x_0
         y_pred = (np.sin(yaw_pred) * vx_pred) * Ts + y_0
@@ -735,7 +726,6 @@ class calib():
 
         s[0,0] = s_init[0] # x
         s[0,1] = s_init[1] # y
-        print s_init[1]
         s[0,2] = s_init[2] # yaw
 
         Ts = self.Ts
@@ -823,18 +813,9 @@ class calib():
         # Minimize the least squares error between the model predition
         result = minimize(self.cost_function, p0, args=(p0, cmd_ramp_right, cmd_ramp_left, s_init_ramp, x_ramp_meas, y_ramp_meas, yaw_ramp_meas, timepoints_ramp, cmd_sine_right, cmd_sine_left, s_init_sine, x_sine_meas, y_sine_meas, yaw_sine_meas, timepoints_sine))
         popt = result.x
-        print('[BEGIN] Optimization Result for sine Manouver\n')
+        print('[BEGIN] Optimization Result\n')
         print(result)
-        print('[END] Optimization Result for sine Manouver\n')
-
-
-        print "XXXXXXXXXXXXXXXXXXXXXXx"
-        print "size x_ramp_meas: {}".format(x_ramp_meas.size)
-        print "size y_ramp_meas: {}".format(y_ramp_meas.size)
-
-        print "size cmd_ramp_right: {}".format(cmd_ramp_right.size)
-        print "size time_ramp: {}".format(time_ramp.size)
-        print "size timepoints_ramp: {}".format(timepoints_ramp.size)
+        print('[END] Optimization Result\n')
 
         # Make a prediction based on the fitted parameters for ramp experiment data
         y_opt_predict_ramp = self.simulate(popt, cmd_ramp_right, cmd_ramp_left, s_init_ramp , timepoints_ramp) # Predict to calculate Error
@@ -895,14 +876,6 @@ class calib():
 
         y_pred_ramp_default_params = self.simulate(p0, cmd_ramp_right, cmd_ramp_left, s_init_ramp , timepoints_ramp)
         self.y_pred_ramp_default_params = y_pred_ramp_default_params
-
-
-        print "size x_sine_meas: {}".format(x_ramp_meas.size)
-        print "size y_sine_meas: {}".format(y_ramp_meas.size)
-
-        print "size cmd_ramp_right: {}".format(cmd_ramp_right.size)
-        print "size time_ramp: {}".format(time_ramp.size)
-        print "size timepoints_ramp: {}".format(timepoints_ramp.size)
 
         # PLOTTING
         fig1, ax1 = plt.subplots()
