@@ -1,0 +1,29 @@
+<launch>
+	<arg name="veh" default="$(env VEHICLE_NAME)"/>
+	<arg name="ai_trafo_mode" default="cb" doc="'cb' for colo balance only; 'both' for color balance and linear trafo"/>
+	<arg name="ai_interval" default="5" doc="interval with which the linear trafo gets updated. color balance is performed every second."/>
+	<arg name="verbose" default="false"/>
+	<arg name="controller_name" default="controller.py"/>
+
+	<arg name="/exercise/sampling_factor" default="1.0" doc="Specify the sampling time. k_s = 2 means that the time between two executions gets doubled (for k_s= 1: T = 70ms)"/>
+	<arg name="/exercise/time_delay" default="0.0" doc="Specify the time delay. k_d = 1 means that there is a time delay t_delay = t_delay(0) + k_d * T where T = 70ms"/>
+	<arg name="/exercise/omega_sat" default="2.0" doc="Maximum possible angular velocity."/>
+
+	<!-- start basic args -->
+	<include file="$(find duckietown_demos)/launch/master.launch">
+		<arg name="veh" value="$(arg veh)"/>
+		<arg name="visualization" default="true" />
+		<arg name="verbose" value="$(arg verbose)"/>
+    	<arg name="/camera/raw" default="true" />
+		<arg name="param_file_name" default="default" />
+		<arg name="line_detector_param_file_name" default="default" />
+		<arg name="anti_instagram" default="true" />
+		<arg name="ai_trafo_mode" value="$(arg ai_trafo_mode)"/>
+		<arg name="ai_interval" value="$(arg ai_interval)"/>
+		<arg name="/lane_following/stop_line_filter" default="false" /> <!-- will not every allow a transition into COORDINATION mode -->
+		<arg name="vehicle_avoidance" default="true"/>
+        <arg name="/lane_following/lane_controller" default="false"/> <!-- We'll use the exercise controller instead -->
+        <arg name="/lane_following/lane_exercise_controller" default="true"/>
+		<arg name="controller_name" value="$(arg controller_name)"/>
+	</include>
+</launch>
