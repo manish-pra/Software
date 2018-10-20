@@ -15,7 +15,6 @@ class lane_controller(object):
         self.last_ms = None
         self.pub_counter = 0
 
-
         self.velocity_to_m_per_s = 0.67
         self.omega_to_rad_per_s = 0.45 * 2 * math.pi
 
@@ -29,17 +28,11 @@ class lane_controller(object):
         self.pub_actuator_limits_received = rospy.Publisher("~actuator_limits_received", BoolStamped, queue_size=1)
         self.pub_radius_limit = rospy.Publisher("~radius_limit", BoolStamped, queue_size=1)
 
-
-
         # Subscriptions
         self.sub_lane_reading = rospy.Subscriber("~lane_pose", LanePose, self.PoseHandling, "lane_filter", queue_size=1)
-
         self.sub_obstacle_avoidance_pose = rospy.Subscriber("~obstacle_avoidance_pose", LanePose, self.PoseHandling, "obstacle_avoidance",queue_size=1)
         self.sub_obstacle_detected = rospy.Subscriber("~obstacle_detected", BoolStamped, self.setFlag, "obstacle_detected", queue_size=1)
-
         self.sub_intersection_navigation_pose = rospy.Subscriber("~intersection_navigation_pose", LanePose, self.PoseHandling, "intersection_navigation",queue_size=1)   # TODO: remap topic in file catkin_ws/src/70-convenience-packages/duckietown_demos/launch/master.launch !
-
-
 
         # self.sub_parking_pose = rospy.Subscriber("~parking_pose", LanePose, self.PoseHandling, "parking",queue_size=1)   # TODO: remap topic in file catkin_ws/src/70-convenience-packages/duckietown_demos/launch/master.launch !
 
@@ -56,11 +49,7 @@ class lane_controller(object):
 
         # FSM
         self.sub_switch = rospy.Subscriber("~switch",BoolStamped, self.cbSwitch,  queue_size=1)     # for this topic, no remapping is required, since it is directly defined in the namespace lane_controller_node by the fsm_node (via it's default.yaml file)
-
-
         self.sub_stop_line = rospy.Subscriber("~stop_line_reading",StopLineReading, self.cbStopLineReading,  queue_size=1)     # for this topic, no remapping is required, since it is directly defined in the namespace lane_controller_node by the fsm_node (via it's default.yaml file)
-
-
         self.sub_fsm_mode = rospy.Subscriber("~fsm_mode", FSMState, self.cbMode, queue_size=1)
 
         self.msg_radius_limit = BoolStamped()
@@ -295,7 +284,6 @@ class lane_controller(object):
                 self.pose_msg = input_pose_msg
                 self.pose_msg.curvature_ref = input_pose_msg.curvature
 
-
                 self.v_ref_possible["main_pose"] = self.v_bar
 
                 # Adapt speed to stop line!
@@ -443,9 +431,6 @@ class lane_controller(object):
         omega = self.k_d * (0.22/self.v_bar) * self.cross_track_err + self.k_theta * (0.22/self.v_bar) * self.heading_err
         omega += (omega_feedforward)
 
-
-
-
         # check if nominal omega satisfies min radius, otherwise constrain it to minimal radius
         if math.fabs(omega) > car_control_msg.v / self.min_radius:
             if self.last_ms is not None:
@@ -464,9 +449,6 @@ class lane_controller(object):
         # check if velocity is large enough such that car can actually execute desired omega
             if car_control_msg.v - 0.5 * math.fabs(omega) * 0.1 < 0.065:
                 car_control_msg.v = 0.065 + 0.5 * math.fabs(omega) * 0.1
-
-
-
 
         # apply magic conversion factors
         car_control_msg.v = car_control_msg.v * self.velocity_to_m_per_s
