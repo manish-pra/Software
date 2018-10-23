@@ -9,18 +9,35 @@
 	<arg name="pkg_name_wheels_driver_node" default="dagu_car" doc="name of the package"/>
 	<arg name="node_name" default="lane_exercise_controller_node" doc="name of the node"/>
 	<arg name="node_name_wheels_driver_node" default="wheels_driver_node" doc="name of the node"/>
+
+	<arg name="/exercise/sampling_factor" default="1.0"/>
+	<arg name="/exercise/time_delay" default="0.0"/>
+	<arg name="/exercise/omega_sat" default="2.0" />
+
+	<param name="/exercise/sampling_factor" value="$(arg /exercise/sampling_factor)"/>
+	<param name="/exercise/time_delay" value="$(arg /exercise/time_delay)"/>
+	<param name="/exercise/omega_sat" value="$(arg /exercise/omega_sat)" />
+
 	<group ns="$(arg veh)">
 	    <!-- Local -->
 	    <node if="$(arg local)" pkg="$(arg pkg_name)" type="$(arg node_name).py" name="$(arg node_name)" output="screen" clear_params="true" required="true">
-			<arg name="controller_name" value="$(arg controller_name)"/>
-	        <rosparam command="load" file="$(find duckietown)/config/$(arg config)/$(arg pkg_name)/$(arg node_name)/$(arg param_file_name).yaml"/>
+			<remap from="lane_exercise_controller_node/lane_pose" to="lane_controller_node/lane_pose"/>
+			<remap from="lane_exercise_controller_node/switch" to="lane_controller_node/switch"/>
+			<remap from="lane_exercise_controller_node/at_stop_line" to="lane_controller_node/at_stop_line"/>
+			<remap from="lane_exercise_controller_node/fsm_mode" to="lane_controller_node/fsm_mode"/>
+			<remap from="lane_exercise_controller_node/car_cmd" to="lane_controller_node/car_cmd"/>
+			<param name="controller_name" value="$(arg controller_name)"/>
 	        <rosparam command="load" file="$(find duckietown)/config/$(arg config)/$(arg pkg_name_wheels_driver_node)/$(arg node_name_wheels_driver_node)/$(arg param_file_name_wheels_driver_node).yaml"/>
 	    </node>
 	    <!-- Remote -->
 		<include unless="$(arg local)" file="$(find duckietown)/machines"/>
 	    <node unless="$(arg local)" machine="$(arg veh)" pkg="$(arg pkg_name)" type="$(arg node_name).py" name="$(arg node_name)" output="screen" clear_params="true" required="true">
-	        <arg name="controller_name" value="$(arg controller_name)"/>
-			<rosparam command="load" file="$(find duckietown)/config/$(arg config)/$(arg pkg_name)/$(arg node_name)/$(arg param_file_name).yaml"/>
+			<remap from="lane_exercise_controller_node/lane_pose" to="lane_controller_node/lane_pose"/>
+			<remap from="lane_exercise_controller_node/switch" to="lane_controller_node/switch"/>
+			<remap from="lane_exercise_controller_node/at_stop_line" to="lane_controller_node/at_stop_line"/>
+			<remap from="lane_exercise_controller_node/fsm_mode" to="lane_controller_node/fsm_mode"/>
+			<remap from="lane_exercise_controller_node/car_cmd" to="lane_controller_node/car_cmd"/>
+			<param name="controller_name" value="$(arg controller_name)"/>
 	        <rosparam command="load" file="$(find duckietown)/config/$(arg config)/$(arg pkg_name_wheels_driver_node)/$(arg node_name_wheels_driver_node)/$(arg param_file_name_wheels_driver_node).yaml"/>
 	    </node>
 	</group>

@@ -32,7 +32,7 @@ class lane_controller(object):
         rospy.on_shutdown(self.custom_shutdown)
 
         duckietown_root = os.environ['DUCKIETOWN_ROOT'] #assumes they sourced environment.sh
-        controller_name = rospy.get_param("controller_name")       
+        controller_name = rospy.get_param("~controller_name")       
 
         ex_path = "/exercises/controls_exercise/" + controller_name
         template_src = imp.load_source('module.name', duckietown_root + ex_path)
@@ -62,15 +62,13 @@ class lane_controller(object):
         self.measure_time = False
 
         # Setup array for time delay
-        k_d = self.controller_class.k_d
-        if k_d > 0:
+        if self.time_delay > 0:
             self.arr_delay = [[0, 0, 0, 0, 0, 0, 0]] # d_est, phi_est, d_ref, phi_ref, v_ref, t_delay, dt_last
-            for i in range(1, k_d):
+            for i in range(1, self.time_delay):
                 self.arr_delay.append([0, 0, 0, 0, 0, 0, 0])
 
         rospy.loginfo("[%s] Initialized " %(rospy.get_name()))
         rospy.loginfo("\n\n\n\n\nREADY FOR EXERCISE " + controller_name + "\n\n\n\n\n")
-
 
     def cbStopLine(self, msg):
         if msg.data and self.measure_time:
@@ -185,6 +183,6 @@ class lane_controller(object):
 
 
 if __name__ == "__main__":
-    rospy.init_node("lane_exercise_controller",anonymous=False)
+    rospy.init_node("lane_exercise_controller_node",anonymous=False)
     lane_control_node = lane_controller()
 rospy.spin()

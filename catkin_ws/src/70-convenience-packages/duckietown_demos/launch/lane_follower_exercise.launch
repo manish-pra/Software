@@ -4,10 +4,13 @@
 	<arg name="ai_interval" default="5" doc="interval with which the linear trafo gets updated. color balance is performed every second."/>
 	<arg name="verbose" default="false"/>
 	<arg name="controller_name" default="controller.py"/>
+	<arg name="/exercise/sampling_factor" default="1.0"/>
+	<arg name="/exercise/time_delay" default="0.0"/>
+	<arg name="/exercise/omega_sat" default="2.0" />
 
-	<arg name="/exercise/sampling_factor" default="1.0" doc="Specify the sampling time. k_s = 2 means that the time between two executions gets doubled (for k_s= 1: T = 70ms)"/>
-	<arg name="/exercise/time_delay" default="0.0" doc="Specify the time delay. k_d = 1 means that there is a time delay t_delay = t_delay(0) + k_d * T where T = 70ms"/>
-	<arg name="/exercise/omega_sat" default="2.0" doc="Maximum possible angular velocity."/>
+	<param name="/exercise/sampling_factor" value="$(arg /exercise/sampling_factor)"/>
+	<param name="/exercise/time_delay" value="$(arg /exercise/time_delay)"/>
+	<param name="/exercise/omega_sat" value="$(arg /exercise/omega_sat)" />
 
 	<!-- start basic args -->
 	<include file="$(find duckietown_demos)/launch/master.launch">
