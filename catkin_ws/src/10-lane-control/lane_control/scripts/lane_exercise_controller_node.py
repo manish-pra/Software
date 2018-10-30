@@ -48,8 +48,9 @@ class lane_controller(object):
         self.time_delay = rospy.get_param("~time_delay")  
         self.omega_sat = rospy.get_param("~omega_sat")
 
-        if !isinstance(self.time_delay, int):
-            sys.exit("Time delay must be an INT")
+        if not isinstance(self.time_delay, int):
+            print "Time delay must be an INT"
+            self.time_delay = int(self.time_delay)
 
 
         # Set up variable which measures how long it took since last command
