@@ -5,9 +5,9 @@
 	<arg name="verbose" default="false"/>
 	<arg name="controller_name" default="controller.py"/>
 
-	<arg name="/exercise/sampling_factor" default="1.0"/>
-	<arg name="/exercise/time_delay" default="0.0"/>
-	<arg name="/exercise/omega_sat" default="4.0" />
+	<arg name="/exercise/sampling_factor" default="1.0" doc="Float Factor which slows sample rate. Ignored if less than 1.0."/>
+	<arg name="/exercise/time_delay" default="0" doc="INT Number of samples to delay controller. Try 40 for a challenge."/>
+	<arg name="/exercise/omega_sat" default="4.0" doc="Float maximum angular velocity. Try 0.1 for a challenge."/>
 
 	<!-- start basic args -->
 	<include file="$(find duckietown_demos)/launch/master.launch">

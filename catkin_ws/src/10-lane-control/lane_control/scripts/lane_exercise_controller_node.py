@@ -4,6 +4,7 @@ import math
 from duckietown_msgs.msg import Twist2DStamped, LanePose, FSMState, BoolStamped
 from duckietown_msgs.srv import SetFSMState
 import os, imp, time
+import sys
 
 ################# NOTE TO ALL TEACHING ASSISTANTS!!! ###################
 # IF you need to customize the behavior of a part exercise outside     #
@@ -45,7 +46,10 @@ class lane_controller(object):
         # Customizations for different exercises. These are defined at top level rosparam "/"
         self.sampling_factor = rospy.get_param("~sampling_factor")
         self.time_delay = rospy.get_param("~time_delay")  
-        self.omega_sat = rospy.get_param("~omega_sat")  
+        self.omega_sat = rospy.get_param("~omega_sat")
+
+        if !isinstance(self.time_delay, int):
+            sys.exit("Time delay must be an INT")
 
 
         # Set up variable which measures how long it took since last command
