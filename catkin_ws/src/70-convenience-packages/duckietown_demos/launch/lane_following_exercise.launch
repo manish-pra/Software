@@ -4,13 +4,10 @@
 	<arg name="ai_interval" default="5" doc="interval with which the linear trafo gets updated. color balance is performed every second."/>
 	<arg name="verbose" default="false"/>
 	<arg name="controller_name" default="controller.py"/>
+
 	<arg name="/exercise/sampling_factor" default="1.0"/>
 	<arg name="/exercise/time_delay" default="0.0"/>
-	<arg name="/exercise/omega_sat" default="2.0" />
-
-	<param name="/exercise/sampling_factor" value="$(arg /exercise/sampling_factor)"/>
-	<param name="/exercise/time_delay" value="$(arg /exercise/time_delay)"/>
-	<param name="/exercise/omega_sat" value="$(arg /exercise/omega_sat)" />
+	<arg name="/exercise/omega_sat" default="4.0" />
 
 	<!-- start basic args -->
 	<include file="$(find duckietown_demos)/launch/master.launch">
@@ -28,5 +25,8 @@
         <arg name="/lane_following/lane_controller" default="false"/> <!-- We'll use the exercise controller instead -->
         <arg name="/lane_following/lane_exercise_controller" default="true"/>
 		<arg name="controller_name" value="$(arg controller_name)"/>
+		<param name="/exercise/sampling_factor" value="$(arg /exercise/sampling_factor)"/>
+		<param name="/exercise/time_delay" value="$(arg /exercise/time_delay)"/>
+		<param name="/exercise/omega_sat" value="$(arg /exercise/omega_sat)" />
 	</include>
 </launch>

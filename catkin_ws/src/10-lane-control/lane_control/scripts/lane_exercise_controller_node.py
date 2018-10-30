@@ -153,11 +153,11 @@ class lane_controller(object):
 
     # FSM
     def cbMode(self,fsm_state_msg):
-        if not self.operating and fsm_state_msg.state == "LANE_FOLLOWING":
-            self.start_time = self.getCurrentMillis()
-            self.measure_time = True
+#        if not self.operating and fsm_state_msg.state == "LANE_FOLLOWING":
+#            self.start_time = self.getCurrentMillis()
+#            self.measure_time = True
 
-        self.operating = fsm_state_msg.state == "LANE_FOLLOWING"
+        self.operating = fsm_state_msg.data
 
     def getCurrentMillis(self):
         return int(round(time.time() * 1000))

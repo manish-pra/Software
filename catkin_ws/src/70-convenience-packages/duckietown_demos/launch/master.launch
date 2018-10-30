@@ -129,6 +129,10 @@
 
 <arg name="tcp_communication" default="false"/>
 
+<arg name="/exercise/sampling_factor" default="1.0"/>
+<arg name="/exercise/time_delay" default="0.0"/>
+<arg name="/exercise/omega_sat" default="4.0" />
+
 <!-- Excersie parameters -->
 <arg name="controller_name" default="controller.py"/>
 
@@ -386,6 +390,9 @@
 			<arg name="config" value="$(arg config)"/>
 			<arg name="param_file_name" value="$(arg param_file_name)"/>
 			<arg name="controller_name" value="$(arg controller_name)"/>
+			<param name="/exercise/sampling_factor" value="$(arg /exercise/sampling_factor)"/>
+			<param name="/exercise/time_delay" value="$(arg /exercise/time_delay)"/>
+			<param name="/exercise/omega_sat" value="$(arg /exercise/omega_sat)" />
 		</include>
 	</group>
 
