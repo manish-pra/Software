@@ -23,9 +23,9 @@
 			<remap from="lane_exercise_controller_node/fsm_mode" to="lane_controller_node/fsm_mode"/>
 			<remap from="lane_exercise_controller_node/car_cmd" to="lane_controller_node/car_cmd"/>
 			<param name="controller_name" value="$(arg controller_name)"/>
-			<param name="/exercise/sampling_factor" value="$(arg /exercise/sampling_factor)"/>
-			<param name="/exercise/time_delay" value="$(arg /exercise/time_delay)"/>
-			<param name="/exercise/omega_sat" value="$(arg /exercise/omega_sat)" />
+			<param name="sampling_factor" value="$(arg /exercise/sampling_factor)"/>
+			<param name="time_delay" value="$(arg /exercise/time_delay)"/>
+			<param name="omega_sat" value="$(arg /exercise/omega_sat)" />
 	        <rosparam command="load" file="$(find duckietown)/config/$(arg config)/$(arg pkg_name_wheels_driver_node)/$(arg node_name_wheels_driver_node)/$(arg param_file_name_wheels_driver_node).yaml"/>
 	    </node>
 	    <!-- Remote -->
@@ -37,9 +37,9 @@
 			<remap from="lane_exercise_controller_node/fsm_mode" to="lane_controller_node/fsm_mode"/>
 			<remap from="lane_exercise_controller_node/car_cmd" to="lane_controller_node/car_cmd"/>
 			<param name="controller_name" value="$(arg controller_name)"/>
-			<param name="/exercise/sampling_factor" value="$(arg /exercise/sampling_factor)"/>
-			<param name="/exercise/time_delay" value="$(arg /exercise/time_delay)"/>
-			<param name="/exercise/omega_sat" value="$(arg /exercise/omega_sat)" />
+			<param name="sampling_factor" value="$(arg /exercise/sampling_factor)"/>
+			<param name="time_delay" value="$(arg /exercise/time_delay)"/>
+			<param name="omega_sat" value="$(arg /exercise/omega_sat)" />
 	        <rosparam command="load" file="$(find duckietown)/config/$(arg config)/$(arg pkg_name_wheels_driver_node)/$(arg node_name_wheels_driver_node)/$(arg param_file_name_wheels_driver_node).yaml"/>
 	    </node>
 	</group>

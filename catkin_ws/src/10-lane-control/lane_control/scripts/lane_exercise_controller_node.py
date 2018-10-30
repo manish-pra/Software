@@ -43,9 +43,9 @@ class lane_controller(object):
         self.sub_fsm_mode = rospy.Subscriber("/" + str(veh_name) + "/fsm_node/mode", FSMState, self.cbMode, queue_size=1)
 
         # Customizations for different exercises. These are defined at top level rosparam "/"
-        self.sampling_factor = rospy.get_param("/exercise/sampling_factor")
-        self.time_delay = rospy.get_param("/exercise/time_delay")  
-        self.omega_sat = rospy.get_param("/exercise/omega_sat")  
+        self.sampling_factor = rospy.get_param("~sampling_factor")
+        self.time_delay = rospy.get_param("~time_delay")  
+        self.omega_sat = rospy.get_param("~omega_sat")  
 
 
         # Set up variable which measures how long it took since last command

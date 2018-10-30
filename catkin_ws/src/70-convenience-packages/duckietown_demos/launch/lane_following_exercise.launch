@@ -25,8 +25,8 @@
         <arg name="/lane_following/lane_controller" default="false"/> <!-- We'll use the exercise controller instead -->
         <arg name="/lane_following/lane_exercise_controller" default="true"/>
 		<arg name="controller_name" value="$(arg controller_name)"/>
-		<param name="/exercise/sampling_factor" value="$(arg /exercise/sampling_factor)"/>
-		<param name="/exercise/time_delay" value="$(arg /exercise/time_delay)"/>
-		<param name="/exercise/omega_sat" value="$(arg /exercise/omega_sat)" />
+		<arg name="/exercise/sampling_factor" value="$(arg /exercise/sampling_factor)"/>
+		<arg name="/exercise/time_delay" value="$(arg /exercise/time_delay)"/>
+		<arg name="/exercise/omega_sat" value="$(arg /exercise/omega_sat)" />
 	</include>
 </launch>
