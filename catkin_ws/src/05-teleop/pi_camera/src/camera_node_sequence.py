@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 import io
 import thread
-
+import numpy as np
+import cv2
 import yaml
-
+from cv_bridge import CvBridge, CvBridgeError
 from duckietown_msgs.msg import BoolStamped
 from duckietown_utils import get_duckiefleet_root
 from picamera import PiCamera
@@ -80,6 +81,25 @@ class CameraNode(object):
         self.camera.close()
         rospy.loginfo("[%s] Capture Ended." % (self.node_name))
 
+    def kmeans_algo(self, stream_data):
+        K = 3
+        sg = 4
+        isg = 0.25
+        img = np.fromstring(stream_data, np.uint8)
+        img = cv2.imdecode(img, cv2.IMREAD_COLOR)
+        img = cv2.resize(img, (0,0), fx=isg, fy=isg)
+        Z = img.reshape((-1,3))
+        Z = np.float32(Z)
+
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+        ret,label,center=cv2.kmeans(Z,K,None,criteria,10,cv2.KMEANS_RANDOM_CENTERS)
+        center = np.uint8(center)
+        res = center[label.flatten()]
+        res2 = res.reshape((img.shape))
+        res2 = cv2.resize(res2, (0,0), fx=sg, fy=sg) 
+        stream_data = np.array(cv2.imencode('.jpeg', res2)[1]).tostring()
+        return stream_data
+
     def grabAndPublish(self, stream, publisher):
         while not self.update_framerate and not self.is_shutdown and not rospy.is_shutdown():
             yield stream
@@ -90,8 +110,10 @@ class CameraNode(object):
             stream_data = stream.getvalue()
             # Generate compressed image
             image_msg = CompressedImage()
-            image_msg.format = "jpeg"
+            stream_data = self.kmeans_algo(stream_data) 
+
             image_msg.data = stream_data
+            image_msg.format = "jpeg"
 
             image_msg.header.stamp = stamp
             image_msg.header.frame_id = self.frame_id
